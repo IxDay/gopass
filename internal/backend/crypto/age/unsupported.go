@@ -11,25 +11,27 @@ import (
 
 // ExportPublicKey is not implemented
 func (a *Age) ExportPublicKey(ctx context.Context, id string) ([]byte, error) {
+	debug.Log("export: %q", id)
 	return []byte(id), nil
 }
 
 // FindIdentities it TODO
 func (a *Age) FindIdentities(ctx context.Context, keys ...string) ([]string, error) {
-	nk, err := a.getAllIdentities(ctx)
+	ids, err := a.listIdentities(ctx)
 	if err != nil {
 		return nil, err
 	}
-	matches := make([]string, 0, len(nk))
+	matches := make([]string, 0, len(keys))
 	for _, k := range keys {
 		debug.Log("Key: %s", k)
-		if _, found := nk[k]; found {
+		if _, found := ids[k]; found {
 			debug.Log("Found")
 			matches = append(matches, k)
 			continue
 		}
-		debug.Log("not found in %+v", nk)
+		debug.Log("not found in %+v", ids)
 	}
+
 	sort.Strings(matches)
 	return matches, nil
 }
@@ -60,11 +62,22 @@ func (a *Age) FindRecipients(ctx context.Context, keys ...string) ([]string, err
 
 // FormatKey is TODO
 func (a *Age) FormatKey(ctx context.Context, id, tpl string) string {
+	switch tpl {
+	case "{{ .Identity.Name }}":
+		return ""
+	case "{{ .Identity.Email }}":
+		return ""
+	}
 	return id
 }
 
 // Fingerprint return the id
 func (a *Age) Fingerprint(ctx context.Context, id string) string {
+	// set := NewSet(krCache.ToStringArray())
+	// for _, key := range krCache {
+	// 	set[key.Identity.Recipient().String()] = struct{}{}
+	// }
+	debug.Log("fingerprint: %q", id)
 	return id
 }
 
@@ -75,6 +88,7 @@ func (a *Age) ImportPublicKey(ctx context.Context, buf []byte) error {
 
 // ListRecipients is TODO
 func (a *Age) ListRecipients(context.Context) ([]string, error) {
+	debug.Log("baar")
 	return nil, fmt.Errorf("not implemented")
 }
 

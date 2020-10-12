@@ -17,29 +17,17 @@ type Keyring []Keypair
 
 // Keypair is a public / private keypair
 type Keypair struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Identity string `json:"identity"`
-}
-
-func (a *Age) pkself(ctx context.Context) (age.Recipient, error) {
-	kr, err := a.loadKeyring(ctx)
-
-	var id *age.X25519Identity
-	if err != nil || len(kr) < 1 {
-		id, err = a.genKey(ctx)
-	} else {
-		id, err = age.ParseX25519Identity(kr[len(kr)-1].Identity)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return id.Recipient(), nil
+	Name     string              `json:"name"`
+	Email    string              `json:"email"`
+	Identity *age.X25519Identity `json:"identity"`
 }
 
 func (a *Age) genKey(ctx context.Context) (*age.X25519Identity, error) {
-	debug.Log("No native age key found. Generating ...")
-	id, err := a.generateIdentity(ctx, termio.DetectName(ctx, nil), termio.DetectEmail(ctx, nil))
+	if !termio.AskForConfirmation(ctx, "No native age key found. Do you want to generate one?") {
+		return nil, nil
+	}
+	debug.Log("Generating age keyring...")
+	id, err := a.generateIdentity(termio.DetectName(ctx, nil), termio.DetectEmail(ctx, nil))
 	if err != nil {
 		return nil, err
 	}
@@ -48,28 +36,33 @@ func (a *Age) genKey(ctx context.Context) (*age.X25519Identity, error) {
 
 // GenerateIdentity will create a new native private key
 func (a *Age) GenerateIdentity(ctx context.Context, name, email, _ string) error {
-	_, err := a.generateIdentity(ctx, name, email)
+	_, err := a.generateIdentity(name, email)
 	return err
 }
 
-func (a *Age) generateIdentity(ctx context.Context, name, email string) (*age.X25519Identity, error) {
+func (a *Age) generateIdentity(name, email string) (*age.X25519Identity, error) {
 	id, err := age.GenerateX25519Identity()
 	if err != nil {
 		return id, err
 	}
-
-	kr, err := a.loadKeyring(ctx)
-	if err != nil {
-		debug.Log("Warning: Failed to load keyring from %s: %s", a.keyring, err)
-	}
-
-	kr = append(kr, Keypair{
+	krCache = append(krCache, Keypair{
 		Name:     name,
 		Email:    email,
-		Identity: id.String(),
+		Identity: id,
 	})
+	return id, nil
+	// kr, err := a.loadKeyring(ctx)
+	// if err != nil {
+	// 	debug.Log("Warning: Failed to load keyring from %s: %s", a.keyring, err)
+	// }
 
-	return id, a.saveKeyring(ctx, kr)
+	// kr = append(kr, Keypair{
+	// 	Name:     name,
+	// 	Email:    email,
+	// 	Identity: id.String(),
+	// })
+
+	// return id, a.saveKeyring(ctx, kr)
 }
 
 func (a *Age) loadKeyring(ctx context.Context) (Keyring, error) {
@@ -93,7 +86,7 @@ func (a *Age) loadKeyring(ctx context.Context) (Keyring, error) {
 	// remove invalid IDs
 	valid := make(Keyring, 0, len(kr))
 	for _, k := range kr {
-		if k.Identity == "" {
+		if k.Identity == nil {
 			continue
 		}
 		valid = append(valid, k)
@@ -125,4 +118,9 @@ func (a *Age) saveKeyring(ctx context.Context, k Keyring) error {
 	}
 	debug.Log("saved encrypted keyring to %s", a.keyring)
 	return nil
+}
+
+func (a *Age) hasKeyring() bool {
+	_, err := os.Stat(a.keyring)
+	return err == nil
 }

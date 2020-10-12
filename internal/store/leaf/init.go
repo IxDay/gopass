@@ -23,7 +23,6 @@ func (s *Store) Init(ctx context.Context, path string, ids ...string) error {
 		return errors.Errorf(`Found already initialized store at %s.
 You can add secondary stores with gopass init --path <path to secondary store> --store <mount name>`, path)
 	}
-
 	// initialize recipient list
 	recipients := make([]string, 0, len(ids))
 

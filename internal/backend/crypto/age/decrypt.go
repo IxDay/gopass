@@ -3,6 +3,7 @@ package age
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"io/ioutil"
 
@@ -20,11 +21,15 @@ func (a *Age) Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
 			return []byte(pw), err
 		})
 	}
-	ids, err := a.getAllIds(ctx)
+	header, _, err := Parse(bytes.NewBuffer(ciphertext))
+	cb, err := a.getMatchingCb(ctx, header.Fingerprints())
 	if err != nil {
 		return nil, err
 	}
-	return a.decrypt(ciphertext, ids...)
+	if cb == nil {
+		return nil, errors.New("no key available to decrypt")
+	}
+	return cb(ciphertext)
 }
 
 func (a *Age) decrypt(ciphertext []byte, ids ...age.Identity) ([]byte, error) {

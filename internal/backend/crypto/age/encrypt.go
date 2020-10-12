@@ -13,16 +13,10 @@ import (
 
 // Encrypt will encrypt the given payload
 func (a *Age) Encrypt(ctx context.Context, plaintext []byte, recipients []string) ([]byte, error) {
-	// add our own public key
-	pks, err := a.pkself(ctx)
-	if err != nil {
-		return nil, err
-	}
 	recp, err := a.parseRecipients(ctx, recipients)
 	if err != nil {
 		return nil, err
 	}
-	recp = append(recp, pks)
 	recp = dedupe(recp)
 	return a.encrypt(plaintext, recp...)
 }
